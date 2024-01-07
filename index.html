@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>ナミ　アニメーション　テスト　240103</title>
+    <style>
+      body {
+        margin: 0;
+        background-color: rgb(118, 120, 139);
+      }
+      canvas {
+        display: block;
+      }
+    </style>
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://unpkg.com/three@v0.151.3/build/three.module.js",
+          "three/addons/": "https://unpkg.com/three@v0.151.3/examples/jsm/"
+        }
+      }
+    </script>
+  </head>
+  <body>
+    <script type="module">
+      import * as THREE from 'three';
+      import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+      import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+      import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
+
+      let scene, camera, renderer, controls;
+      let mixers = [];
+
+      init();
+      animate();
+
+      function init() {
+        scene = new THREE.Scene();
+
+        camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.001, 100);
+        camera.position.z = 5;
+        camera.position.y = 8;
+
+        renderer = new THREE.WebGLRenderer();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+
+        controls = new OrbitControls(camera, renderer.domElement);
+
+        
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+        scene.add(ambientLight);
+
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.6);
+        // 常にカメラの位置と同じにする用のライト
+        scene.add(directionalLight);
+
+        const textureLoader = new THREE.TextureLoader();
+        textureLoader.load(
+            'hiroyukihome.png',
+            //'thin.jpg',
+            function (texture) {
+                 scene.background = texture;
+            },
+             undefined,
+            function (error) {
+                    console.error(error);
+             }
+          );
+
+        const loader = new GLTFLoader();
+
+        function loadModel(modelFile, mixerArray, scale) {
+          loader.load(modelFile, (gltf) => {
+            const model = gltf.scene;
+            model.scale.set(scale, scale, scale);
+            scene.add(model);
+
+            const mixer = new THREE.AnimationMixer(model);
+            const action = mixer.clipAction(gltf.animations[0]);
+            action.play();
+
+            mixerArray.push(mixer);
+          });
+        }
+
+
+//ここにオブジェクトをセット★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+        loadModel('felt_hiroyuki_240108.gltf', mixers, 5);
+        //loadModel('Nami_face4.gltf', mixers, 5);
+        //loadModel('Nami_bikini3.gltf', mixers, 5);
+        //loadModel('Nami_upbody3.gltf', mixers, 5);
+        //loadModel('Nami_underbody2.gltf', mixers, 5);
+
+        window.addEventListener('resize', onWindowResize, false);
+      }
+
+      function onWindowResize() {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+      }
+
+      function animate() {
+        requestAnimationFrame(animate);
+
+        let maxDeltaTime = 0;
+
+        mixers.forEach(mixer => {
+          mixer.update(0.04);
+          maxDeltaTime = Math.max(maxDeltaTime, mixer.time);
+        });
+
+        mixers.forEach(mixer => {
+          mixer.setTime(maxDeltaTime);
+        });
+
+        controls.update();
+
+        // 照明の位置をカメラに合わせる
+        scene.children.filter(obj => obj instanceof THREE.DirectionalLight).forEach(light => {
+          light.position.copy(camera.position);
+        });
+
+        renderer.render(scene, camera);
+      }
+    </script>
+  </body>
+</html>
